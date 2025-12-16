@@ -13,6 +13,7 @@ const swaggerDocument = require("./swagger-output.json");
 import cors from "cors";
 import { corsOptions } from "@shared/middleware";
 import { logger } from "@shared/src/Logger";
+import router from "./routes/auth.router"
 import prisma from "./database";
 const app = express();
 
@@ -25,7 +26,7 @@ app.use(cookieParser());
 // Your routes here
 app.use(cors(corsOptions()));
 
-//app.use("/api/auth", router);
+app.use("/api/auth", router);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/docs-json", (req, res) => {
   res.json({

@@ -1,21 +1,22 @@
-
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-
-
 model UserCredentials {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique
+  id           String         @id @default(uuid()) @db.Uuid
+  email        String         @unique
   displayName  String
-  password String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  password     String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // --- MISSING FIELD ADDED BELOW ---
+  // This connects the User to their RefreshTokens
+  refreshTokens RefreshToken[]
 
   @@map("user_credentials")
 }
@@ -31,7 +32,6 @@ model RefreshToken {
   userId    String   @db.Uuid
   
   // Relation definition
-  // onDelete: Cascade means if a user is deleted, their tokens are too
   user      UserCredentials @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")

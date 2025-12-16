@@ -24,3 +24,9 @@ export interface AuthTokens {
 export interface AuthResponse extends AuthTokens {
   user: UserData;
 }
+
+export interface UsualResponse {
+  success: boolean;
+  message: string;
+  data: any;
+}
