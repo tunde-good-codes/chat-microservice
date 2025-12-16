@@ -8,13 +8,12 @@ import express from "express";
 import cookieParser from "cookie-parser";
 
 import swaggerUi from "swagger-ui-express";
-//import { errorMiddleware } from "@packages/error-handler/error-middleware";
-import router from "./routes/auth.router";
 import { errorMiddleware } from "@shared/error-handler/error-middleware";
 const swaggerDocument = require("./swagger-output.json");
 import cors from "cors";
 import { corsOptions } from "@shared/middleware";
 import { logger } from "@shared/src/Logger";
+import prisma from "./database";
 const app = express();
 
 app.use(express.json());
@@ -26,7 +25,7 @@ app.use(cookieParser());
 // Your routes here
 app.use(cors(corsOptions()));
 
-app.use("/api/auth", router);
+//app.use("/api/auth", router);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/docs-json", (req, res) => {
   res.json({
@@ -47,10 +46,27 @@ app.get("/api/auth", (req, res) => {
 app.use(errorMiddleware);
 
 const PORT = process.env.AUTH_SERVICE_PORT || 8081;
-app.listen(PORT, () => {
-  console.log(`Auth Service listening at http://localhost:${PORT}/api/auth`);
-  console.log(`Swagger Service listening at http://localhost:${PORT}/docs`);
-});
+
+async function startServer() {
+  try {
+    // This sends a simple query to the DB to verify connection
+    await prisma.$connect();
+    console.log(
+      "✅ Database connected successfully to Neon DB for auth service"
+    );
+    app.listen(PORT, () => {
+      console.log(
+        `Auth Service listening at http://localhost:${PORT}/api/auth`
+      );
+      console.log(`Swagger Service listening at http://localhost:${PORT}/docs`);
+    });
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // server()
 // server.on("error", console.error);

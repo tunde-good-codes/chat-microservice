@@ -1,25 +1,19 @@
 import { PrismaClient } from "@prisma/client";
 
-
-// create a single instance of PrismaClient
-const prisma = new PrismaClient({
+const prismaClientSingleton = () => {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "info", "warn", "error"] : ["error"],
-})
+  });
+};
 
-// handle graceful shutdown
-process.on("beforeExit", async () => {
-    await prisma.$disconnect();
-});
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
 
-process.on("SIGINT", async () => {
-    await prisma.$disconnect();
-    process.exit(0);
-});
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClientSingleton | undefined;
+};
 
-process.on("SIGTERM", async () => {
-    await prisma.$disconnect();
-    process.exit(0);
-});
-
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
 export default prisma;
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
