@@ -19,8 +19,9 @@ import {
   InternalServerError,
   ValidationError,
 } from "@shared/error-handler";
-import { Request, Response, NextFunction } from "express";
+import e, { Request, Response, NextFunction } from "express";
 import { loginSchema, registerSchema } from "@/validation";
+import { publishUserRegistered } from "@/utils/messaging/event-publishing";
 
 export const registerUser = async (
   req: Request,
@@ -70,6 +71,14 @@ export const registerUser = async (
       },
     });
 
+    const userData = {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt.toISOString(),
+    };
+
+    publishUserRegistered(userData);
     res.status(201).json({
       success: true,
       message: "Registration successful. Please log in to continue.",
@@ -132,7 +141,7 @@ export const loginUser = async (
 
   const refreshToken = await createRefreshToken(user?.id!);
   const accessToken = generateAccessToken(user?.id!, user?.email!);
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
     message: "login successfully",
     data: {
@@ -167,7 +176,7 @@ export const getUserProfile = async (
     }
 
     res.json({ success: true, data: user });
-  } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+  } catch (error:any) {
+    res.status(500).json({ message: "Internal server error: " + error.message });
   }
 };

@@ -1,13 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+export const isAuthenticated = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   try {
     // 1. Check for the Authorization header
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      res.status(401).json({ success: false, message: "No token provided" });
+      res.status(401).json({ 
+        success: false, 
+        message: "No token provided" 
+      });
       return;
     }
 
@@ -20,12 +27,21 @@ export const isAuthenticated = (req: Request, res: Response, next: NextFunction)
       email: string;
     };
 
-    // 4. Inject userId into a header for downstream services
-    // This is the "Identity Header" pattern
+    // 4. Inject userId into header AND req.user
     req.headers["x-user-id"] = decoded.userId;
+    req.headers["x-user-email"] = decoded.email;
+    
+    // ✅ Set req.user for downstream middleware/controllers
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+    };
 
     next();
   } catch (error) {
-    res.status(401).json({ success: false, message: "Invalid or expired token" });
+    res.status(401).json({ 
+      success: false, 
+      message: "Invalid or expired token" 
+    });
   }
 };

@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:all": "concurrently \"npm run dev:auth\"   \"npm run dev:gateway\"",
+    "dev:all": "concurrently \"npm run dev:auth\"  \"npm run dev:users\"   \"npm run dev:gateway\" ",
     "dev:auth": "cd apps/auth-service && npm run dev",
     "dev:users": "cd apps/user-service && npm run dev",
     "dev:gateway": "cd api-gateway && npm run dev",

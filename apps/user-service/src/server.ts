@@ -17,7 +17,7 @@ const app = express();
 
 connectDb();
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 8082;
 
 // setup middlewares
 app.use(cors(corsOptions()));
