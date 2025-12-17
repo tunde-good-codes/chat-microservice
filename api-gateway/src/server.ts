@@ -12,6 +12,7 @@ import proxy from "express-http-proxy";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import { isAuthenticated } from "./middleware/isAuth";
 
 
 const app = express();
@@ -95,14 +96,20 @@ app.use(
   })
 );
 
+
+// Product service is PROTECTED
 app.use(
   "/api/product",
+  isAuthenticated, // First verify the token
   proxy(`http://localhost:${process.env.PRODUCT_SERVICE_PORT}`, {
     proxyReqPathResolver: (req) => `/api/product${req.url}`,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq: any) => {
+      // Pass the userId we extracted in the middleware to the Product Service
+      proxyReqOpts.headers['x-user-id'] = srcReq.headers['x-user-id'];
+      return proxyReqOpts;
+    }
   })
 );
-
-
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",

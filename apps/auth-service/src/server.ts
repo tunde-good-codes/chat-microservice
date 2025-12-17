@@ -15,6 +15,7 @@ import { corsOptions } from "@shared/middleware";
 import { logger } from "@shared/src/Logger";
 import router from "./routes/auth.router"
 import prisma from "./database";
+import { initPublisher } from "./utils/messaging/event-publishing";
 const app = express();
 
 app.use(express.json());
@@ -52,6 +53,7 @@ async function startServer() {
   try {
     // This sends a simple query to the DB to verify connection
     await prisma.$connect();
+    await initPublisher();
     console.log(
       "✅ Database connected successfully to Neon DB for auth service"
     );

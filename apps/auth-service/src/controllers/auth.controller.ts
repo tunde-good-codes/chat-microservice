@@ -5,7 +5,12 @@ import {
   RegisterInput,
   UsualResponse,
 } from "@/types";
-import { createRefreshToken, generateAccessToken, hashPassword, verifyPassword } from "@/utils/tokens";
+import {
+  createRefreshToken,
+  generateAccessToken,
+  hashPassword,
+  verifyPassword,
+} from "@/utils/tokens";
 import crypto from "crypto";
 import jwt, { SignOptions } from "jsonwebtoken";
 
@@ -75,7 +80,11 @@ export const registerUser = async (
   }
 };
 
-export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { error, value } = loginSchema.validate(req.body, { abortEarly: true });
 
   if (error) {
@@ -98,17 +107,17 @@ export const loginUser = async (req: Request, res: Response, next: NextFunction)
 
   const user = await prisma.userCredentials.findUnique({
     where: {
-      email
-    }
+      email,
+    },
   });
 
-if (!user) {
-  res.status(401).json({ 
-    success: false, 
-    message: "Invalid email or password" 
-  });
-  return;
-}
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid email or password",
+    });
+    return;
+  }
 
   const isPasswordMatched = verifyPassword(password, user?.password!);
   if (!isPasswordMatched) {
@@ -119,7 +128,7 @@ if (!user) {
     return;
   }
 
-const {password:_, ...userData} = user
+  const { password: _, ...userData } = user;
 
   const refreshToken = await createRefreshToken(user?.id!);
   const accessToken = generateAccessToken(user?.id!, user?.email!);
@@ -134,3 +143,31 @@ const {password:_, ...userData} = user
   });
 };
 
+export const getUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // req.user was set by the isAuthenticated middleware
+    const { userId } = req.user;
+
+    const user = await prisma.userCredentials.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
