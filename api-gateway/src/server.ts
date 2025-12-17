@@ -12,7 +12,7 @@ import proxy from "express-http-proxy";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
-import initializedConfig from "./libs/initializeSiteConfig";
+
 
 const app = express();
 
@@ -69,7 +69,7 @@ app.get("/gateway-health", (req, res) => {
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "Welcome to E-Commerce Multi-Vendor API Gateway",
+    message: "Welcome to Chat App API Gateway",
     version: "1.0.0",
     services: {
       auth: `http://localhost:${process.env.AUTH_SERVICE_PORT}`,
@@ -131,12 +131,6 @@ const server = app.listen(port, () => {
   
   console.log(`Listening at http://localhost:${port}`); // Fixed syntax
   console.log(`Gateway health check: http://localhost:${port}/gateway-health`);
-  try {
-    initializedConfig();
-    console.log("site config initialized");
-  } catch (e) {
-    console.log("error initializing config");
-  }
-});
+  });
 
 server.on("error", console.error);

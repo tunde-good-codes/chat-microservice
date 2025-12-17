@@ -1,6 +1,11 @@
 import prisma from "@/database";
-import { AuthResponse, RegisterInput, UsualResponse } from "@/types";
-import { hashPassword } from "@/utils/tokens";
+import {
+  AuthResponse,
+  LoginInput,
+  RegisterInput,
+  UsualResponse,
+} from "@/types";
+import { createRefreshToken, generateAccessToken, hashPassword, verifyPassword } from "@/utils/tokens";
 import crypto from "crypto";
 import jwt, { SignOptions } from "jsonwebtoken";
 
@@ -10,7 +15,7 @@ import {
   ValidationError,
 } from "@shared/error-handler";
 import { Request, Response, NextFunction } from "express";
-const REFRESH_TOKEN_EXPIRES_IN = 30;
+import { loginSchema, registerSchema } from "@/validation";
 
 export const registerUser = async (
   req: Request,
@@ -18,35 +23,34 @@ export const registerUser = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { email, displayName, password } = req.body as RegisterInput;
+    const { error, value } = registerSchema.validate(req.body, {
+      abortEarly: true,
+    });
 
-    // Validation
-    if (!email || !displayName || !password) {
+    if (error) {
       res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: error.details[0].message,
       });
-      return; // Stop execution here
+      return;
     }
 
-    // Check existing email
+    const { email, displayName, password } = value as RegisterInput;
+
     const existingEmail = await prisma.userCredentials.findUnique({
       where: { email },
     });
 
     if (existingEmail) {
       res.status(409).json({
-        // ✅ 409 Conflict is better than 400
         success: false,
         message: "Email already registered",
       });
-      return; // Stop execution here
+      return;
     }
 
-    // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Create user
     const user = await prisma.userCredentials.create({
       data: {
         email,
@@ -60,6 +64,7 @@ export const registerUser = async (
         createdAt: true,
       },
     });
+
     res.status(201).json({
       success: true,
       message: "Registration successful. Please log in to continue.",
@@ -70,107 +75,62 @@ export const registerUser = async (
   }
 };
 
-export const generateAccessToken = (userId: string, email: string): string => {
-  const secret = process.env.JWT_SECRET;
+export const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { error, value } = loginSchema.validate(req.body, { abortEarly: true });
 
-  if (!secret) {
-    throw new Error("JWT_SECRET environment variable is not set");
+  if (error) {
+    res.status(400).json({
+      success: false,
+      message: error.details[0].message,
+    });
+    return;
   }
 
-  // Use number format (seconds) instead of string
-  const expiresIn = 15 * 60; // 15 minutes in seconds
+  const { email, password } = value as LoginInput;
 
-  return jwt.sign({ userId, email, type: "access" }, secret, { expiresIn });
-};
-
-// Generate and Store Refresh Token
-export const createRefreshToken = async (
-  userId: string
-): Promise<{
-  token: string;
-  tokenId: string;
-  expiresAt: Date;
-}> => {
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_IN);
-  const tokenId = crypto.randomUUID();
-  const secret = process.env.JWT_REFRESH_SECRET;
-
-  if (!secret) {
-    throw new Error("REFRESH_SECRET environment variable is not set");
+  if (!email) {
+    res.status(409).json({
+      success: false,
+      message: "Invalid email or password",
+    });
+    return;
   }
 
-  // Use number format (seconds) instead of string
-  const expiresIn = 7 * 24 * 60 * 60; // 604,800 seconds
-  // 15 minutes in seconds
-  // Store in database
-  await prisma.refreshToken.create({
+  const user = await prisma.userCredentials.findUnique({
+    where: {
+      email
+    }
+  });
+
+if (!user) {
+  res.status(401).json({ 
+    success: false, 
+    message: "Invalid email or password" 
+  });
+  return;
+}
+
+  const isPasswordMatched = verifyPassword(password, user?.password!);
+  if (!isPasswordMatched) {
+    res.status(409).json({
+      success: false,
+      message: "Invalid email or password",
+    });
+    return;
+  }
+
+const {password:_, ...userData} = user
+
+  const refreshToken = await createRefreshToken(user?.id!);
+  const accessToken = generateAccessToken(user?.id!, user?.email!);
+  return res.status(201).json({
+    success: true,
+    message: "login successfully",
     data: {
-      tokenId,
-      userId,
-      expiresAt,
+      userData,
+      accessToken,
+      refreshToken,
     },
   });
-  const token = jwt.sign({ userId, tokenId, type: "refresh" }, secret, {
-    expiresIn,
-  });
-
-  return {
-    token,
-    tokenId,
-    expiresAt,
-  };
 };
 
-// Verify Refresh Token
-export const verifyRefreshToken = async (
-  token: string
-): Promise<{ userId: string; tokenId: string } | null> => {
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as {
-      userId: string;
-      tokenId: string;
-      type: string;
-    };
-
-    if (decoded.type !== "refresh") {
-      return null;
-    }
-
-    // Check if token exists in database and is not expired
-    const tokenRecord = await prisma.refreshToken.findFirst({
-      where: {
-        tokenId: decoded.tokenId,
-        userId: decoded.userId,
-        expiresAt: {
-          gt: new Date(), // greater than current date
-        },
-      },
-    });
-
-    if (!tokenRecord) {
-      return null;
-    }
-
-    return {
-      userId: decoded.userId,
-      tokenId: decoded.tokenId,
-    };
-  } catch (error) {
-    return null;
-  }
-};
-
-// ✅ Now this will work
-export const revokeRefreshToken = async (tokenId: string): Promise<void> => {
-  await prisma.refreshToken.deleteMany({
-    where: { tokenId },
-  });
-};
-
-// Revoke All User Refresh Tokens
-export const revokeAllUserTokens = async (userId: string): Promise<void> => {
-  await prisma.refreshToken.deleteMany({
-    where: { userId },
-  });
-};
