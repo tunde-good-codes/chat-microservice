@@ -47,7 +47,7 @@ app.get("/api/auth", (req, res) => {
 // Error middleware MUST be last
 app.use(errorMiddleware);
 
-const PORT = process.env.AUTH_SERVICE_PORT || 8081;
+const PORT = process.env.PORT || 8081;
 
 async function startServer() {
   try {
