@@ -70,7 +70,7 @@ export const getAllUsers = async (
   });
 };
 
-const upsertFromAuthEvent = async (
+export const upsertFromAuthEvent = async (
   req: Request,
   res: Response,
   next: NextFunction,

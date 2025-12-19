@@ -1,108 +1,178 @@
-import { connect, Channel, Connection, ConsumeMessage, Replies } from 'amqplib';
-import { 
-  AUTH_EVENT_EXCHANGE, 
-  AUTH_USER_REGISTERED_ROUTING_KEY, 
-  AuthUserRegisteredPayload 
-} from '@shared/types/events/auth-events';
-import { env } from '@/config/env';
-import { logger } from '@/utils/logger';
-import { userService } from '@/services/user.service';
+import amqp, { Channel, Connection, ConsumeMessage, ChannelModel } from "amqplib";
+import {
+  AUTH_EVENT_EXCHANGE,
+  AUTH_USER_REGISTERED_ROUTING_KEY,
+  AuthRegisteredEvent,
+} from "@shared/types/events/auth-events";
+import { syncFromAuthUser } from "@/userController";
 
-// State management
-let connection: Connection | null = null;
-let channel: Channel | null = null;
+let connection: Connection | null | any = null;
+let channel: Channel | null |any = null;
 let consumerTag: string | null = null;
 let isConnecting = false;
 
-const QUEUE_NAME = 'user-service.auth-events'; // Descriptive queue name
+const QUEUE_NAME = "user-service.auth-events";
 
 /**
- * Logic to process the actual message content
+ * Handle incoming auth event messages
  */
 const handleMessage = async (message: ConsumeMessage, ch: Channel) => {
   try {
-    const raw = message.content.toString('utf-8');
-    const event = JSON.parse(raw);
-    
-    // Pass the payload to your business logic
-    await userService.syncFromAuthUser(event.payload);
+    const raw = message.content.toString("utf-8");
+    const event = JSON.parse(raw) as AuthRegisteredEvent;
 
-    // Acknowledge: "I've processed this successfully"
+    console.log(`📨 Received auth event: ${event.type}`, event.payload);
+
+    // Process the event based on type
+    if (event.type === AUTH_USER_REGISTERED_ROUTING_KEY) {
+      await syncFromAuthUser(event.payload);
+      console.log(`✅ User synced successfully: ${event.payload.email}`);
+    }
+
+    // Acknowledge the message
     ch.ack(message);
   } catch (error) {
-    logger.error({ err: error }, 'Failed to process auth event');
-    
-    // Nack: "I failed." 
-    // Requeue: false (don't loop forever if the data is malformed)
-    ch.nack(message, false, false); 
+    console.error("❌ Failed to process auth event:", error);
+    // Reject and don't requeue (send to dead letter queue if configured)
+    ch.nack(message, false, false);
   }
 };
 
 /**
- * Starts the consumer and sets up topology
+ * Start the auth event consumer
  */
-export const startAuthEventConsumer = async (retryCount = 0): Promise<void> => {
-  if (!env.RABBITMQ_URL) {
-    logger.warn('RabbitMQ URL missing. Consumer will not start.');
+export const startAuthEventConsumer = async (
+  retryCount = 0
+): Promise<void> => {
+  const uri = process.env.RABBITMQ_URI;
+
+  if (!uri) {
+    console.warn("RABBITMQ_URI is missing. Auth consumer will not start.");
     return;
   }
 
-  if (isConnecting || channel) return;
+  if (isConnecting) {
+    console.log("Consumer connection attempt already in progress...");
+    return;
+  }
+
+  if (channel) {
+    console.log("Auth event consumer already running");
+    return;
+  }
+
   isConnecting = true;
 
   try {
-    connection = await connect(env.RABBITMQ_URL);
+    // Remove optional chaining here
+    connection = await amqp.connect(uri);
+    
+    // Create channel - connection.createChannel() returns Promise<Channel>
     channel = await connection.createChannel();
 
-    // 1. Ensure the exchange exists
-    await channel.assertExchange(AUTH_EVENT_EXCHANGE, 'topic', { durable: true });
+    if (!channel) {
+      throw new Error("Failed to create channel");
+    }
 
-    // 2. Ensure the queue exists
-    // Durable: survives RabbitMQ restart
-    const q = await channel.assertQueue(QUEUE_NAME, { durable: true });
-
-    // 3. Bind the queue to the exchange with the routing key
-    await channel.bindQueue(q.queue, AUTH_EVENT_EXCHANGE, AUTH_USER_REGISTERED_ROUTING_KEY);
-
-    // 4. Start consuming
-    const result: Replies.Consume = await channel.consume(q.queue, (msg) => {
-      if (msg) void handleMessage(msg, channel!);
+    // Assert exchange
+    await channel.assertExchange(AUTH_EVENT_EXCHANGE, "topic", {
+      durable: true,
     });
 
-    consumerTag = result.consumerTag;
+    // Assert queue
+    const queue = await channel.assertQueue(QUEUE_NAME, {
+      durable: true,
+    });
+
+    // Bind queue to exchange with routing key
+    // queue.queue is guaranteed to exist from assertQueue
+    await channel.bindQueue(
+      queue.queue,
+      AUTH_EVENT_EXCHANGE,
+      AUTH_USER_REGISTERED_ROUTING_KEY
+    );
+
+    // Set prefetch to process one message at a time
+    await channel.prefetch(1);
+
+    // Start consuming
+    const consumeResult = await channel.consume(
+      queue.queue,
+      (msg: ConsumeMessage | null) => {
+        if (!msg) return;
+
+        void handleMessage(msg, channel!).catch((error) => {
+          console.error("Error in message handler:", error);
+          channel.nack(msg, false, false);
+        });
+      }
+    );
+
+    // consumerTag is guaranteed from consume()
+    consumerTag = consumeResult.consumerTag;
+
+    console.log("✅ Auth event consumer started");
     isConnecting = false;
-    logger.info('✅ Auth event consumer connected and listening');
 
-    // Handle Connection failures
-    connection.on('close', () => {
-      logger.warn('RabbitMQ consumer connection lost. Retrying...');
-      cleanupState();
-      reconnect(retryCount);
+    // Handle connection events
+    // Use proper type for connection - it has 'on' method
+    connection.on("close", () => {
+      console.warn("Auth consumer connection closed. Reconnecting...");
+      connection = null;
+      channel = null;
+      consumerTag = null;
+
+      const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+      setTimeout(() => startAuthEventConsumer(retryCount + 1), delay);
     });
 
+    connection.on("error", (err:any) => {
+      console.error("❌ Auth consumer connection error:", err);
+    });
+
+    // Handle channel events
+    channel.on("close", () => {
+      console.warn("Auth consumer channel closed");
+      channel = null;
+    });
+
+    channel.on("error", (err:any) => {
+      console.error("❌ Auth consumer channel error:", err);
+    });
   } catch (error) {
+    console.error("❌ Failed to start auth event consumer:", error);
     isConnecting = false;
-    logger.error({ err: error }, 'Failed to initialize RabbitMQ consumer');
-    reconnect(retryCount);
+
+    const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
+    console.log(`Retrying consumer in ${delay / 1000} seconds...`);
+    setTimeout(() => startAuthEventConsumer(retryCount + 1), delay);
   }
 };
 
 /**
- * Helpers for cleanup and reconnection
+ * Stop the auth event consumer gracefully
  */
-const cleanupState = () => {
-  connection = null;
-  channel = null;
-  consumerTag = null;
-};
+export const stopAuthEventConsumer = async (): Promise<void> => {
+  try {
+    if (channel && consumerTag) {
+      await channel.cancel(consumerTag);
+      consumerTag = null;
+    }
 
-const reconnect = (retryCount: number) => {
-  const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-  setTimeout(() => startAuthEventConsumer(retryCount + 1), delay);
-};
+    if (channel) {
+      const currentChannel = channel;
+      channel = null;
+      await currentChannel.close();
+    }
 
-export const stopAuthEventConsume = async () => {
-  if (channel && consumerTag) await channel.cancel(consumerTag);
-  if (connection) await connection.close();
-  cleanupState();
+    if (connection) {
+      const currentConnection = connection;
+      connection = null;
+      await currentConnection.close();
+    }
+
+    console.log("✅ Auth event consumer stopped");
+  } catch (error) {
+    console.error("❌ Failed to stop auth event consumer:", error);
+  }
 };
