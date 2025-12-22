@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
+import 'tsconfig-paths/register';
 
 import express from "express";
 
@@ -11,8 +12,10 @@ import { errorMiddleware } from "@shared/error-handler/error-middleware";
 //const swaggerDocument = require("./swagger-output.json");
 import cors from "cors";
 import { corsOptions } from "@shared/middleware";
-//import router from "./routes/auth.router"
+import router from "./routes"
 import prisma from "./database";
+import { startAuthEventConsumer } from "./utils/messaging/event-consuming";
+import { initMessaging } from "./utils/messaging/event-publisher";
 //import { initPublisher } from "./utils/messaging/event-publishing";
 const app = express();
 
@@ -24,13 +27,17 @@ app.use(express.json());
 app.use(cookieParser());
 // Your routes here
 app.use(cors(corsOptions()));
-
+app.use(errorMiddleware)
 //app.use("/api/auth", router);
 // app.get("/docs-json", (req, res) => {
 //   res.json({
 //     swaggerDocument,
 //   });
 // });
+
+
+
+app.use("/api/user", router);
 
 // Add this endpoint
 app.get("/api/user", (req, res) => {
@@ -42,7 +49,7 @@ app.get("/api/user", (req, res) => {
 });
 
 // Error middleware MUST be last
-app.use(errorMiddleware);
+//app.use(errorMiddleware);
 
 const PORT = process.env.PORT || 8081;
 
@@ -50,6 +57,8 @@ async function startServer() {
   try {
     // This sends a simple query to the DB to verify connection
     await prisma.$connect();
+    await initMessaging()
+    await startAuthEventConsumer()
     //await initPublisher();
     console.log(
       "✅ Database connected successfully to Neon DB for user service"

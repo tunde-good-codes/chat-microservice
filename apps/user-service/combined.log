@@ -61,3 +61,46 @@
 {"buffer":{"data":[104,226,90,152,64,221,43,220,161,58,6,126],"type":"Buffer"},"level":"info","message":"User registered successfully","service":"identity-service","timestamp":"2025-10-05T11:46:32.424Z"}
 {"level":"info","message":"Received GET request to /api/auth/users ","service":"identity-service","timestamp":"2025-10-05T11:46:37.169Z"}
 {"level":"info","message":"Request body,  undefined ","service":"identity-service","timestamp":"2025-10-05T11:46:37.170Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T14:05:05.905Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T14:06:05.100Z"}
+{"level":"error","message":"Failed to proccess auth event","service":"identity-service","timestamp":"2025-12-22T14:14:43.224Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T14:37:48.575Z"}
+{"level":"error","message":"Failed to proccess auth event","service":"identity-service","timestamp":"2025-12-22T14:37:52.635Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T14:48:19.829Z"}
+{"level":"error","message":"RabbitMQ connection error","service":"identity-service","timestamp":"2025-12-22T18:43:20.426Z"}
+{"level":"warn","message":"RabbitMQ connection closed","service":"identity-service","timestamp":"2025-12-22T18:43:23.411Z"}
+{"level":"error","message":"Auth consumer connection error","service":"identity-service","timestamp":"2025-12-22T18:43:23.412Z"}
+{"level":"warn","message":"Auth consumer connection closed","service":"identity-service","timestamp":"2025-12-22T18:43:23.455Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T19:43:45.156Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T19:44:48.982Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T19:50:44.990Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T19:51:20.441Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T19:55:16.041Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T19:55:38.016Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T19:58:58.312Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T19:59:02.712Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T20:02:56.368Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T20:03:05.238Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T20:04:17.394Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T20:04:22.538Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T20:04:57.406Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T20:05:02.621Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"identity-service","timestamp":"2025-12-22T20:06:19.054Z"}
+{"level":"info","message":"Auth event consumer started","service":"identity-service","timestamp":"2025-12-22T20:06:27.476Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:13:10.243Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-22T20:13:17.556Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:13:59.633Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-22T20:14:06.510Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:15:03.522Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:15:29.988Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-22T20:15:38.286Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:24:17.053Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-22T20:24:28.841Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:25:34.068Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-22T20:25:51.106Z"}
+{"level":"error","message":"Auth consumer connection error","service":"chat-microservice","timestamp":"2025-12-22T20:30:46.296Z"}
+{"level":"warn","message":"Auth consumer connection closed","service":"chat-microservice","timestamp":"2025-12-22T20:30:46.308Z"}
+{"level":"error","message":"RabbitMQ connection error","service":"chat-microservice","timestamp":"2025-12-22T20:35:44.449Z"}
+{"level":"warn","message":"RabbitMQ connection closed","service":"chat-microservice","timestamp":"2025-12-22T20:35:44.452Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:39:50.546Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:43:34.409Z"}

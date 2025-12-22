@@ -1,18 +1,20 @@
-import amqp from "amqplib"; // ✅ Import default
-import type { Channel, Connection } from "amqplib";
-import {
-  USER_EVENTS_EXCHANGE,
-  USER_CREATED_ROUTING_KEY,
-  UserCreatedEvent,
-  UserCreatedPayload,
-} from "@shared/types/events/user-events";
 
-let connection: Connection | null | any = null;
+import { logger } from "@shared/src/Logger";
+import { USER_CREATED_ROUTING_KEY, USER_EVENTS_EXCHANGE, UserCreatedEvent, UserCreatedPayload } from "@shared/types/events/user-events";
+import amqplib from 'amqplib';
+
+import type { Channel, ChannelModel, Connection } from 'amqplib';
+
+
+type ManagedConnection = Connection & Pick<ChannelModel, 'close' | 'createChannel'>;
+
+let connection: ManagedConnection | null = null;
 let channel: Channel | null = null;
 
 const messagingEnabled = Boolean(process.env.RABBITMQ_URI);
 
 const ensureChannel = async (): Promise<Channel | null> => {
+  const uri = process.env.RABBITMQ_URI
   if (!messagingEnabled) {
     return null;
   }
@@ -21,76 +23,62 @@ const ensureChannel = async (): Promise<Channel | null> => {
     return channel;
   }
 
-  if (!process.env.RABBITMQ_URI) {
+  if (!uri) {
     return null;
   }
 
-  try {
-    const amqpConnection = await amqp.connect(process.env.RABBITMQ_URI); // ✅ Use amqp.connect
-    connection = amqpConnection;
+  const amqpConnection = (await amqplib.connect(uri)) as unknown as ManagedConnection;
+  connection = amqpConnection;
+  amqpConnection.on('close', () => {
+    logger.warn('RabbitMQ connection closed');
+    connection = null;
+    channel = null;
+  });
+  amqpConnection.on('error', (error) => {
+    logger.error( 'RabbitMQ connection error');
+  });
 
-    amqpConnection.on("close", () => {
-      console.warn("User publisher RabbitMQ connection closed");
-      connection = null;
-      channel = null;
-    });
+  const amqpChannel = await amqpConnection.createChannel();
+  channel = amqpChannel;
+  await amqpChannel.assertExchange(USER_EVENTS_EXCHANGE, 'topic', { durable: true });
 
-    amqpConnection.on("error", (error) => {
-      console.error("❌ User publisher RabbitMQ connection error:", error);
-    });
-
-    const amqpChannel = await amqpConnection.createChannel();
-    channel = amqpChannel;
-
-    await amqpChannel.assertExchange(USER_EVENTS_EXCHANGE, "topic", {
-      durable: true,
-    });
-
-    console.log("✅ User service RabbitMQ publisher initialized");
-    return amqpChannel;
-  } catch (error) {
-    console.error("❌ Failed to create RabbitMQ channel:", error);
-    return null;
-  }
+  return amqpChannel;
 };
 
-export const initMessaging = async (): Promise<void> => {
+export const initMessaging = async () => {
   if (!messagingEnabled) {
-    console.info("RabbitMQ URL is not configured; messaging disabled");
+    logger.info('RabbitMQ URL is not configured; messaging disabled');
     return;
   }
 
   await ensureChannel();
-  console.info("User service RabbitMQ publisher initialized");
+  logger.info('User service RabbitMQ publisher initialized');
 };
 
-export const closeMessaging = async (): Promise<void> => {
+export const closeMessaging = async () => {
   try {
     if (channel) {
-      const currentChannel = channel;
+      const currentChannel: Channel = channel;
       channel = null;
       await currentChannel.close();
     }
-
     if (connection) {
-      const currentConnection = connection;
+      const currentConnection: ManagedConnection = connection;
       connection = null;
       await currentConnection.close();
     }
 
-    console.info("✅ User service RabbitMQ publisher closed");
+    logger.info('User service RabbitMQ publisher closed');
   } catch (error) {
-    console.error("❌ Error closing RabbitMQ connection/channel:", error);
+    logger.error( 'Error closing RabbitMQ connection/channel');
   }
 };
 
-export const publishUserCreatedEvent = async (
-  payload: UserCreatedPayload
-): Promise<void> => {
+export const publishUserCreatedEvent = async (payload: UserCreatedPayload) => {
   const ch = await ensureChannel();
 
   if (!ch) {
-    console.debug("Skipping user.created event publish; messaging disabled");
+    logger.debug( 'Skipping user.created event publish; messaging disabled');
     return;
   }
 
@@ -106,21 +94,13 @@ export const publishUserCreatedEvent = async (
       USER_EVENTS_EXCHANGE,
       USER_CREATED_ROUTING_KEY,
       Buffer.from(JSON.stringify(event)),
-      {
-        contentType: "application/json",
-        persistent: true,
-      }
+      { contentType: 'application/json', persistent: true },
     );
-
     if (!success) {
-      console.warn("⚠️ Failed to publish user.created event", event);
-    } else {
-      console.log(`🚀 Event Published: ${USER_CREATED_ROUTING_KEY}`, {
-        userId: payload.id,
-        email: payload.email,
-      });
+      logger.warn( 'Failed to publish user.created event');
     }
+    logger.info(`event published for user.create in user service`)
   } catch (error) {
-    console.error("❌ Error publishing user.created event:", error);
+    logger.error( 'Error publishing user.created event');
   }
 };

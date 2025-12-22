@@ -1,14 +1,14 @@
-
 import dotenv from "dotenv";
 dotenv.config();
 
 import bcrypt from "bcryptjs";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import prisma from "@/database";
+import crypto from "crypto";
 
 const ACCESS_TOKEN: Secret = process.env.JWT_SECRET!;
 const REFRESH_TOKEN: Secret = process.env.JWT_REFRESH_SECRET!;
-const REFRESH_TOKEN_EXPIRES_IN = 7;
+const REFRESH_TOKEN_EXPIRES_IN = 7; // days
 
 const ACCESS_OPTIONS: SignOptions = {
   expiresIn: process.env.JWT_EXPIRES_IN as SignOptions["expiresIn"],
@@ -17,6 +17,8 @@ const REFRESH_OPTIONS: SignOptions = {
   expiresIn: process.env.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
 };
 
+// ============= PASSWORD HASHING =============
+
 export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 12;
   return bcrypt.hash(password, saltRounds);
@@ -24,13 +26,15 @@ export const hashPassword = async (password: string): Promise<string> => {
 
 export const verifyPassword = async (
   password: string,
-  hashedPassword: string,
+  hashedPassword: string
 ): Promise<boolean> => {
   return bcrypt.compare(password, hashedPassword);
 };
 
+// ============= TYPE DEFINITIONS =============
+
 export interface AccessTokenPayload {
-  sub: string; // userId
+  userId: string; // Changed to match your middleware
   email: string;
 }
 
@@ -39,22 +43,11 @@ export interface RefreshTokenPayload {
   tokenId: string;
 }
 
+// ============= ACCESS TOKEN =============
+
 export const signAccessToken = (payload: AccessTokenPayload): string => {
   return jwt.sign(payload, ACCESS_TOKEN, ACCESS_OPTIONS);
 };
-
-export const signRefreshToken = (payload: RefreshTokenPayload): string => {
-  return jwt.sign(payload, REFRESH_TOKEN, REFRESH_OPTIONS);
-};
-
-// export const verifyRefreshToken = (payload: string): RefreshTokenPayload => {
-//   return jwt.verify(payload, REFRESH_TOKEN) as RefreshTokenPayload;
-// };
-
-
-
-
-
 
 export const generateAccessToken = (userId: string, email: string): string => {
   const secret = process.env.JWT_SECRET;
@@ -69,7 +62,19 @@ export const generateAccessToken = (userId: string, email: string): string => {
   return jwt.sign({ userId, email, type: "access" }, secret, { expiresIn });
 };
 
-// Generate and Store Refresh Token
+export const verifyAccessToken = (token: string): AccessTokenPayload => {
+  return jwt.verify(token, ACCESS_TOKEN) as AccessTokenPayload;
+};
+
+// ============= REFRESH TOKEN =============
+
+export const signRefreshToken = (payload: RefreshTokenPayload): string => {
+  return jwt.sign(payload, REFRESH_TOKEN, REFRESH_OPTIONS);
+};
+
+/**
+ * Generate and Store Refresh Token in Database
+ */
 export const createRefreshToken = async (
   userId: string
 ): Promise<{
@@ -87,8 +92,8 @@ export const createRefreshToken = async (
   }
 
   // Use number format (seconds) instead of string
-  const expiresIn = 7 * 24 * 60 * 60; // 604,800 seconds
-  // 15 minutes in seconds
+  const expiresIn = REFRESH_TOKEN_EXPIRES_IN * 24 * 60 * 60; // 7 days in seconds
+
   // Store in database
   await prisma.refreshToken.create({
     data: {
@@ -97,6 +102,7 @@ export const createRefreshToken = async (
       expiresAt,
     },
   });
+
   const token = jwt.sign({ userId, tokenId, type: "refresh" }, secret, {
     expiresIn,
   });
@@ -108,7 +114,9 @@ export const createRefreshToken = async (
   };
 };
 
-// Verify Refresh Token
+/**
+ * Verify Refresh Token and return decoded payload
+ */
 export const verifyRefreshToken = async (
   token: string
 ): Promise<{ userId: string; tokenId: string } | null> => {
@@ -147,14 +155,20 @@ export const verifyRefreshToken = async (
   }
 };
 
-// ✅ Now this will work
+// ============= TOKEN REVOCATION =============
+
+/**
+ * Revoke a specific refresh token by tokenId
+ */
 export const revokeRefreshToken = async (tokenId: string): Promise<void> => {
   await prisma.refreshToken.deleteMany({
     where: { tokenId },
   });
 };
 
-// Revoke All User Refresh Tokens
+/**
+ * Revoke all refresh tokens for a user (logout from all devices)
+ */
 export const revokeAllUserTokens = async (userId: string): Promise<void> => {
   await prisma.refreshToken.deleteMany({
     where: { userId },

@@ -1,5 +1,5 @@
 /**
- * This is not a production server yet!
+ * This is not a userion server yet!
  * This is only a minimal backend to get started.
  */
 import dotenv from "dotenv";
@@ -95,16 +95,22 @@ app.use(
     proxyReqPathResolver: (req) => `/api/auth${req.url}`,
   })
 );
-
-
-// Product service is PROTECTED
 app.use(
-  "/api/product",
+  "/api/user",
+  proxy(`http://localhost:${process.env.USER_SERVICE_PORT}`, {
+    proxyReqPathResolver: (req) => `/api/user${req.url}`,
+  })
+);
+
+
+// user service is PROTECTED
+app.use(
+  "/api/user",
   isAuthenticated, // First verify the token
-  proxy(`http://localhost:${process.env.PRODUCT_SERVICE_PORT}`, {
-    proxyReqPathResolver: (req) => `/api/product${req.url}`,
+  proxy(`http://localhost:${process.env.USER_SERVICE_PORT}`, {
+    proxyReqPathResolver: (req) => `/api/user${req.url}`,
     proxyReqOptDecorator: (proxyReqOpts, srcReq: any) => {
-      // Pass the userId we extracted in the middleware to the Product Service
+      // Pass the userId we extracted in the middleware to the user Service
       proxyReqOpts.headers['x-user-id'] = srcReq.headers['x-user-id'];
       return proxyReqOpts;
     }

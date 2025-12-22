@@ -1,13 +1,13 @@
+import { isAuthenticated } from "../../auth-service/src/middleware/isAuth";
 import { authenticateToken, validateRequest } from "../../../shared/middleware";
-import * as userController from "./userController";
 import { Router } from "express";
-import { updateProfileSchema } from "./validation";
-
+import { createUser, findUserById, getAllUsers, updateUserProfile } from "./userController";
 const router = Router();
 
 // Protected routes (requires authentication)
-router.get("/profile", authenticateToken, userController.getProfile);
-router.put("/profile", authenticateToken, validateRequest(updateProfileSchema), userController.updateProfile);
-router.delete("/profile", authenticateToken, userController.deleteProfile);
+router.post("/", isAuthenticated, createUser);
+router.get("/", isAuthenticated, getAllUsers);
+router.get("/:id", isAuthenticated, findUserById);
+router.put("/user-profile/:id", isAuthenticated,  updateUserProfile);
 
 export default router;

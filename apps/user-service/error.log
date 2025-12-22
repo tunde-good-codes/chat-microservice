@@ -1,0 +1,6 @@
+{"level":"error","message":"Failed to proccess auth event","service":"identity-service","timestamp":"2025-12-22T14:14:43.224Z"}
+{"level":"error","message":"Failed to proccess auth event","service":"identity-service","timestamp":"2025-12-22T14:37:52.635Z"}
+{"level":"error","message":"RabbitMQ connection error","service":"identity-service","timestamp":"2025-12-22T18:43:20.426Z"}
+{"level":"error","message":"Auth consumer connection error","service":"identity-service","timestamp":"2025-12-22T18:43:23.412Z"}
+{"level":"error","message":"Auth consumer connection error","service":"chat-microservice","timestamp":"2025-12-22T20:30:46.296Z"}
+{"level":"error","message":"RabbitMQ connection error","service":"chat-microservice","timestamp":"2025-12-22T20:35:44.449Z"}

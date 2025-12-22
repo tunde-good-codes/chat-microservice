@@ -1,7 +1,9 @@
+import { CreateUserInput } from "./../types";
 import prisma from "@/database";
 import { NextFunction, Request, Response } from "express";
 import { AuthUserRegisteredPayload } from "@shared/types/events/auth-events";
 import { publishUserCreatedEvent } from "./utils/messaging/event-publisher";
+import { createUserProfileSchema } from "./validation";
 
 export const findUserById = async (
   req: Request,
@@ -86,14 +88,14 @@ export const syncFromAuthUser = async (
   try {
     // Upsert: create if doesn't exist, update if exists
     const user = await prisma.user.upsert({
-      where: { id: payload.userId as string},
+      where: { id: payload.id as string },
       update: {
         email: payload.email,
         displayName: payload.displayName,
         updatedAt: new Date(),
       },
       create: {
-        id: payload.userId as string,
+        id: payload.id as string,
         email: payload.email,
         displayName: payload.displayName,
       },
@@ -162,5 +164,49 @@ export const updateUserProfile = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const createUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { error, value } = createUserProfileSchema.validate(req.body, {
+      abortEarly: true,
+    });
+
+    if (error) {
+      res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      });
+      return;
+    }
+    const { email, displayName } = value as CreateUserInput;
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        displayName,
+      },
+    });
+
+    await publishUserCreatedEvent({
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "user created successfully!",
+      user,
+    });
+  } catch (e) {
+    next(e);
   }
 };
