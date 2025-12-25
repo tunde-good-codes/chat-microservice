@@ -51,7 +51,7 @@ app.get("/api/user", (req, res) => {
 // Error middleware MUST be last
 //app.use(errorMiddleware);
 
-const PORT = process.env.PORT || 8081;
+const PORT = process.env.PORT || 8082;
 
 async function startServer() {
   try {

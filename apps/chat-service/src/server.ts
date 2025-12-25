@@ -1,41 +1,75 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
 import dotenv from "dotenv";
-import noteRoutes from "./routes"
-import {
-  corsOptions,
-  errorHandler,
-  healthCheck,
-} from "../../../shared/middleware";
-import connectDb from "./database";
-
-//load environment variables
 dotenv.config();
+import 'tsconfig-paths/register';
 
+import express from "express";
+
+//import * as path from "path";
+
+
+import { errorMiddleware } from "@shared/error-handler/error-middleware";
+//const swaggerDocument = require("./swagger-output.json");
+import cors from "cors";
+import { corsOptions } from "@shared/middleware";
+import router from "./routes"
+import prisma from "../database";
+//import { initPublisher } from "./utils/messaging/event-publishing";
 const app = express();
-connectDb();
-const PORT = process.env.PORT || 8083;
 
-// setup middlewares
+app.use(express.json());
+//app.use("/assets", express.static(path.join(__dirname, "assets")));
+
+app.use(express.json());
+
+// Your routes here
 app.use(cors(corsOptions()));
-app.use(helmet());
+app.use(errorMiddleware)
+//app.use("/api/auth", router);
+// app.get("/docs-json", (req, res) => {
+//   res.json({
+//     swaggerDocument,
+//   });
+// });
 
-// parse JSON bodies
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
 
-// API routes
-app.use("/notes", noteRoutes);
-app.get("/health", healthCheck);
 
-// Error handling middleware
-app.use(errorHandler);
+app.use("/api/chat", router);
 
-app.listen(PORT, () => {
-  console.log(`Note service is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+// Add this endpoint
+app.get("/api/chat", (req, res) => {
+  res.json({
+    message: "chat service is working via gateway!",
+    success: true,
+    timestamp: new Date().toISOString(),
+  });
 });
 
-export default app;
+// Error middleware MUST be last
+//app.use(errorMiddleware);
+
+const PORT = process.env.PORT || 8083;
+
+async function startServer() {
+  try {
+    // This sends a simple query to the DB to verify connection
+    await prisma.$connect();
+    //await initPublisher();
+    console.log(
+      "✅ Database connected successfully to Neon DB for chat service"
+    );
+    app.listen(PORT, () => {
+      console.log(
+        `chat Service listening at http://localhost:${PORT}/api/chat`
+      );
+      console.log(`Swagger Service listening at http://localhost:${PORT}/docs`);
+    });
+  } catch (error) {
+    console.error("❌ Database connection failed:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+// server()
+// server.on("error", console.error);
