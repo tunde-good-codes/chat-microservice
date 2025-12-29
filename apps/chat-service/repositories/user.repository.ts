@@ -1,11 +1,10 @@
-import type { UserCreatedPayload } from '@chatapp/common';
-import { getPrismaClient } from '@/clients/prisma.client';
+
+import prisma from "../database";
 
 export const userRepository = {
-  async upsertUser(payload: UserCreatedPayload) {
-    const prisma = getPrismaClient();
+  async upsertUser(payload: any) {
 
-    await prisma.user.upsert({
+    await prisma.users.upsert({
       where: { id: payload.id },
       update: {
         email: payload.email,

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { getPrismaClient } from '@/clients/prisma.client';
 import { Conversation, ConversationFilter, ConversationSummary, CreateConversationInput } from "../types/converation";
+import prisma from "../database";
 
 const toConversation = (c: any): Conversation => ({
   id: c.id,
@@ -14,10 +14,9 @@ const toConversation = (c: any): Conversation => ({
 
 export const conversationRepository = {
   async create(input: CreateConversationInput): Promise<Conversation> {
-    const prisma = getPrismaClient();
     const now = new Date();
 
-    const conversation = await prisma.conversation.create({
+    const conversation = await prisma. .create({
       data: {
         id: randomUUID(),
         title: input.title ?? null,
