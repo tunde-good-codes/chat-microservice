@@ -142,7 +142,7 @@ app.use(
 const port = process.env.API_GATEWAY_PORT || 8080;
 const server = app.listen(port, () => {
   
-  console.log(`Listening at http://localhost:${port}`); // Fixed syntax
+  console.log(`Listening at http://localhost:${port}`); // Fixed syntax to see errors
   console.log(`Gateway health check: http://localhost:${port}/gateway-health`);
   });
 
