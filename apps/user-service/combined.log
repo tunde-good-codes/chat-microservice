@@ -104,3 +104,5 @@
 {"level":"warn","message":"RabbitMQ connection closed","service":"chat-microservice","timestamp":"2025-12-22T20:35:44.452Z"}
 {"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:39:50.546Z"}
 {"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-22T20:43:34.409Z"}
+{"level":"info","message":"User service RabbitMQ publisher initialized","service":"chat-microservice","timestamp":"2025-12-30T19:22:52.034Z"}
+{"level":"info","message":"Auth event consumer started","service":"chat-microservice","timestamp":"2025-12-30T19:23:03.966Z"}

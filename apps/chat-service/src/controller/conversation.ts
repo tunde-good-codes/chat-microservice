@@ -7,7 +7,7 @@ import {
   listConversationsQuerySchema,
   listMessagesQuerySchema,
 } from "@/validation";
-import { InternalServerError, ValidationError } from "@shared/error-handler";
+import {  ValidationError } from "@shared/error-handler";
 import type { RequestHandler, Request, Response, NextFunction } from "express";
 
 

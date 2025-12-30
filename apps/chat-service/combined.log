@@ -48,3 +48,7 @@
 {"level":"info","message":"Connected to RabbitMQ","service":"identity-service","timestamp":"2025-10-05T17:02:54.840Z"}
 {"level":"info","message":"Search service is running on port: 3002","service":"identity-service","timestamp":"2025-10-05T17:02:54.846Z"}
 {"level":"info","message":"Connected to mongodb","service":"identity-service","timestamp":"2025-10-05T17:02:59.086Z"}
+{"level":"info","message":"Redis connection established","service":"chat-microservice","timestamp":"2025-12-30T19:25:21.891Z"}
+{"level":"info","message":"Redis client ready","service":"chat-microservice","timestamp":"2025-12-30T19:25:22.176Z"}
+{"level":"error","message":"Redis connection error","service":"chat-microservice","timestamp":"2025-12-30T19:26:30.123Z"}
+{"level":"warn","message":"Redis connection closed","service":"chat-microservice","timestamp":"2025-12-30T19:26:30.140Z"}

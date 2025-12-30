@@ -116,6 +116,20 @@ app.use(
     }
   })
 );
+
+// chat service is PROTECTED
+app.use(
+  "/api/chat",
+  isAuthenticated, // First verify the token
+  proxy(`http://localhost:${process.env.CHAT_SERVICE_PORT}`, {
+    proxyReqPathResolver: (req) => `/api/chat${req.url}`,
+    proxyReqOptDecorator: (proxyReqOpts, srcReq: any) => {
+      // Pass the chatId we extracted in the middleware to the chat Service
+      proxyReqOpts.headers['x-user-id'] = srcReq.headers['x-user-id'];
+      return proxyReqOpts;
+    }
+  })
+);
 app.use((req, res) => {
   res.status(404).json({
     error: "Route not found",
