@@ -26,6 +26,6 @@
       "@shared/*": ["../../shared/*"]
     }
   },
-  "include": ["src/**/*", "../../shared/**/*", "database.ts"],
+  "include": ["src/**/*", "../../shared/**/*", "src/database.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

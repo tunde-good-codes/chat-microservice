@@ -1,16 +1,39 @@
-import { Router } from "express";
-import * as noteController from "./noteController";
-import { validateRequest, authenticateToken } from "../../../shared/middleware";
-import { createNoteSchema, getNotesByUserSchema } from "./validation";
 
-const router = Router();
+import { Router } from 'express';
 
-//All routes require authentication
-router.use(authenticateToken);
+const router = Router()
 
-//Notes CRUD Operations
-router.post("/", validateRequest(createNoteSchema), noteController.createNote);
-router.get("/", validateRequest(getNotesByUserSchema), noteController.getNotes);
-router.get("/:noteId", noteController.getNoteById);
+//export const conversationRouter: Router = Router();
 
-export default router;
+conversationRouter.use(attachAuthenticatedUser);
+
+router.post(
+  '/',
+  validateRequest({ body: createConversationSchema }),
+  createConversationHandler,
+);
+router.get(
+  '/',
+  validateRequest({ query: listConversationsQuerySchema }),
+  listConversationHandler,
+);
+router.get(
+  '/:id',
+  validateRequest({ params: conversationIdParamsSchema }),
+  getConversationHandler,
+);
+
+router.post(
+  '/:id/messages',
+  validateRequest({ params: conversationIdParamsSchema, body: createMessageBodySchema }),
+  createMessageHandler,
+);
+
+router.get(
+  '/:id/messages',
+  validateRequest({ params: conversationIdParamsSchema, query: listMessagesQuerySchema }),
+  listMessageHandler,
+);
+
+
+export default router

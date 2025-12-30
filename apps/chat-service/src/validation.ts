@@ -54,3 +54,45 @@ export const getNotesByUserSchema = Joi.object({
     "string.max": "Search query must not exceed 200 characters",
   }),
 });
+
+export const createConversationSchema = Joi.object({
+  title: Joi.string().min(1).max(200).optional().messages({
+    "string.min": "Title must be at least 1 character long",
+    "string.max": "Title must not exceed 200 characters",
+  }),
+
+  participantIds: Joi.array().items(Joi.string().uuid()).optional().messages({
+    "array.base": "participant IDs must be an array",
+    "string.uuid": "Each participant ID must be a valid UUID",
+  }),
+});
+
+export const listConversationsQuerySchema = Joi.object({
+  participantId: Joi.array().items(Joi.string().uuid()).optional().messages({
+    "array.base": "participant IDs must be an array",
+    "string.uuid": "Each participant ID must be a valid UUID",
+  }),
+});
+
+export const conversationIdParamsSchema = Joi.object({
+  id: Joi.string().uuid(),
+});
+
+export const createMessageBodySchema = Joi.object({
+  body: Joi.string().min(1).max(2000),
+});
+
+export const createMessageSchema = Joi.object({
+  conversationId: Joi.string().uuid(),
+  body: Joi.string().min(1).max(2000),
+});
+
+export const listMessagesQuerySchema = Joi.object({
+  limit: Joi
+    .preprocess(
+      (value) => (value === undefined ? undefined : Number(value)),
+      Joi.number().int().min(1).max(200)
+    )
+    .optional(),
+  after: Joi.string().datetime().optional(),
+});

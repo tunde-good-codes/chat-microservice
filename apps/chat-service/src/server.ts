@@ -1,18 +1,18 @@
 import dotenv from "dotenv";
 dotenv.config();
-import 'tsconfig-paths/register';
+import "tsconfig-paths/register";
 
 import express from "express";
 
 //import * as path from "path";
 
-
 import { errorMiddleware } from "@shared/error-handler/error-middleware";
 //const swaggerDocument = require("./swagger-output.json");
 import cors from "cors";
 import { corsOptions } from "@shared/middleware";
-import router from "./routes"
-import prisma from "../database";
+import router from "./routes";
+import prisma from "./database";
+import { connectRedis } from "./redis/redis.client";
 //import { initPublisher } from "./utils/messaging/event-publishing";
 const app = express();
 
@@ -23,15 +23,13 @@ app.use(express.json());
 
 // Your routes here
 app.use(cors(corsOptions()));
-app.use(errorMiddleware)
+app.use(errorMiddleware);
 //app.use("/api/auth", router);
 // app.get("/docs-json", (req, res) => {
 //   res.json({
 //     swaggerDocument,
 //   });
 // });
-
-
 
 app.use("/api/chat", router);
 
@@ -54,6 +52,7 @@ async function startServer() {
     // This sends a simple query to the DB to verify connection
     await prisma.$connect();
     //await initPublisher();
+    await connectRedis();
     console.log(
       "✅ Database connected successfully to Neon DB for chat service"
     );
