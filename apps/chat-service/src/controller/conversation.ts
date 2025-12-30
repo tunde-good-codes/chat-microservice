@@ -1,4 +1,5 @@
 import { conversationService } from "@/services/conversation.services";
+import { messageService } from "@/services/message.service";
 import {
   conversationIdParamsSchema,
   createConversationSchema,
@@ -9,205 +10,98 @@ import {
 import { InternalServerError, ValidationError } from "@shared/error-handler";
 import type { RequestHandler, Request, Response, NextFunction } from "express";
 
-const parsedConversation = (params: unknown) => {
-  const { id } = conversationIdParamsSchema.parse(params);
-  return id;
-};
 
-export const createConversationHandler: RequestHandler = async (
-  req: Request,
-  res: Response
-) => {
+export const createConversationHandler: RequestHandler = async (req, res) => {
   const { userId } = req.user;
-  try {
-    const { error, value } = createConversationSchema.validate(req.body, {
-      abortEarly: true,
-    });
 
-    if (error) {
-      res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-      return;
-    }
+  const { title, participantIds } =
+    await createConversationSchema.validateAsync(req.body);
 
-    const { title, participantIds } = value;
-    const uniqueParticipantIds = Array.from(
-      new Set([...participantIds, userId])
+  const uniqueParticipantIds = Array.from(
+    new Set([...participantIds, userId]),
+  );
+
+  if (uniqueParticipantIds.length < 2) {
+    throw new ValidationError(
+      "Conversation must include at least one other participant",
     );
-
-    if (uniqueParticipantIds.length < 2) {
-      throw new ValidationError(
-        "Conversation must atleast include one other participant"
-      );
-    }
-
-    const conversation = await conversationService.createConversation({
-      title: title,
-      participantIds: uniqueParticipantIds,
-    });
-    res.status(201).json({ data: conversation });
-  } catch (e) {
-    throw new InternalServerError("bad request");
   }
+
+  const conversation = await conversationService.createConversation({
+    title,
+    participantIds: uniqueParticipantIds,
+  });
+
+  res.status(201).json({ data: conversation });
 };
 
-export const listConversationHandler: RequestHandler = async (
-  req: Request,
-  res: Response
-) => {
+export const listConversationHandler: RequestHandler = async (req, res) => {
   const { userId } = req.user;
 
-  try {
-    const { error, value } = listConversationsQuerySchema.validate(req.query, {
-      abortEarly: true,
-    });
+  const { participantId } =
+    await listConversationsQuerySchema.validateAsync(req.query);
 
-    if (error) {
-      res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-      return;
-    }
-
-    const { participantId } = value;
-
-    if (participantId !== userId) {
-      throw new ValidationError("Unauthorized");
-    }
-
-    const conversations = await conversationService.listConversation({
-      participantId: userId,
-    });
-    res.status(201).json({ data: conversations });
-  } catch (e) {
-    throw new InternalServerError("bad request");
+  if (participantId && participantId !== userId) {
+    throw new ValidationError("Unauthorized");
   }
-};
 
-export const getConversationHandler: RequestHandler = async (
-  req: Request,
-  res: Response
-) => {
+  const conversations = await conversationService.listConversation({
+    participantId: userId,
+  });
+
+  res.json({ data: conversations });
+};
+export const getConversationHandler: RequestHandler = async (req, res) => {
   const { userId } = req.user;
 
-  try {
-    const { error, value } = conversationIdParamsSchema.validate(req.params, {
-      abortEarly: true,
-    });
+  const { id } =
+    await conversationIdParamsSchema.validateAsync(req.params);
 
-    if (error) {
-      res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-      return;
-    }
+  const conversation = await conversationService.getConversationById(id);
 
-    const { id } = value;
-    const conversation = await conversationService.getConversationById(id);
-
-    if (!conversation.participantIds.includes(userId)) {
-      throw new ValidationError("Unauthorized");
-    }
-
-    res.status(201).json({ data: conversation });
-  } catch (e) {
-    throw new InternalServerError("bad request");
+  if (!conversation.participantIds.includes(userId)) {
+    throw new ValidationError("Unauthorized");
   }
+
+  res.json({ data: conversation });
 };
 
-export const createMessageHandler: RequestHandler = async (
-  req: Request,
-  res: Response
-) => {
+export const createMessageHandler: RequestHandler = async (req, res) => {
   const { userId } = req.user;
 
-  try {
-    const { error, value } = conversationIdParamsSchema.validate(req.params, {
-      abortEarly: true,
-    });
+  const { id: conversationId } =
+    await conversationIdParamsSchema.validateAsync(req.params);
 
-    if (error) {
-      res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-      return;
-    }
+  const { body } =
+    await createMessageBodySchema.validateAsync(req.body);
 
-    const { id } = value;
+  const message = await messageService.createMessage(
+    conversationId,
+    userId,
+    body,
+  );
 
-    const { error: messageBodyError, value: messageBodyValue } =
-      createMessageBodySchema.validate(req.query, {
-        abortEarly: true,
-      });
-
-    if (messageBodyError) {
-      res.status(400).json({
-        success: false,
-        message: messageBodyError.details[0].message,
-      });
-      return;
-    }
-
-    const { conversationId, body } = messageBodyValue;
-    const message = await messageService.createMessage(
-      conversationId,
-      userId,
-      body
-    );
-    res.status(201).json({ data: message });
-  } catch (e) {
-    throw new InternalServerError("bad request");
-  }
+  res.status(201).json({ data: message });
 };
+
 
 export const listMessageHandler: RequestHandler = async (req, res) => {
   const { userId } = req.user;
 
-  try {
-    const { error, value } = conversationIdParamsSchema.validate(req.params, {
-      abortEarly: true,
-    });
+  const { id: conversationId } =
+    await conversationIdParamsSchema.validateAsync(req.params);
 
-    if (error) {
-      res.status(400).json({
-        success: false,
-        message: error.details[0].message,
-      });
-      return;
-    }
+  const { limit, after } =
+    await listMessagesQuerySchema.validateAsync(req.query);
 
-    const { id } = value;
+  const messages = await messageService.listMessages(
+    conversationId,
+    userId,
+    {
+      limit,
+      after: after ? new Date(after) : undefined,
+    },
+  );
 
-    const { error: msgError, value: msgValue } =
-      listMessagesQuerySchema.validate(req.query, {
-        abortEarly: true,
-      });
-
-    if (msgError) {
-      res.status(400).json({
-        success: false,
-        message: msgError.details[0].message,
-      });
-      return;
-    }
-
-    const { limit, after } = msgValue;
-
-
-
-    
-  const result = after ? new Date(after) : undefined;
-  const messages = await messageService.listMessages(id, userId, {
-    limit: limit,
-    result,
-  });
   res.json({ data: messages });
-  } catch (e) {
-    throw new InternalServerError("bad request");
-  }
 };

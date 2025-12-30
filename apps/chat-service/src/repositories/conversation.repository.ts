@@ -1,16 +1,20 @@
 import prisma from "@/database";
-import { Conversation, ConversationFilter, ConversationSummary, CreateConversationInput } from "types/converation";
+import { Prisma } from "@/generated/client";
+import { Conversation, ConversationFilter, CreateConversationInput } from "types/converation";
 
+type ConversationWithParticipants =
+  Prisma.ConversationGetPayload<{
+    include: { participants: { select: { id: true } } };
+  }>;
 
-// Fix the transformation function
-const toConversation = (conversation: any): Conversation => ({
-  id: conversation.id,
-  title: conversation.title,
-  participantIds: conversation.participants.map((p: any) => p.id), // This should be userId, not id
-  createdAt: conversation.createdAt,
-  updatedAt: conversation.updatedAt,
-  lastMessageAt: conversation.lastMessageAt,
-  lastMessagePreview: conversation.lastMessagePreview,
+const toConversation = (c: ConversationWithParticipants): Conversation => ({
+  id: c.id,
+  title: c.title,
+  participantIds: c.participants.map((p) => p.id),
+  createdAt: c.createdAt,
+  updatedAt: c.updatedAt,
+  lastMessageAt: c.lastMessageAt,
+  lastMessagePreview: c.lastMessagePreview,
 });
 
 export const conversationRepository = {
@@ -23,11 +27,7 @@ export const conversationRepository = {
         },
       },
       include: {
-        participants: {
-          select: {
-            id: true, // This returns the User's id
-          },
-        },
+        participants: { select: { id: true } },
       },
     });
 
@@ -38,57 +38,36 @@ export const conversationRepository = {
     const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
-        participants: {
-          select: {
-            id: true, // Ensure we get user IDs
-          },
-        },
+        participants: { select: { id: true } },
       },
     });
 
     return conversation ? toConversation(conversation) : null;
   },
 
-  async findSummaries(
-    filter: ConversationFilter
-  ): Promise<ConversationSummary[]> {
+  async findSummaries(filter: ConversationFilter): Promise<Conversation[]> {
     const conversations = await prisma.conversation.findMany({
       where: {
         participants: {
-          some: {
-            id: filter.participantId,
-          },
+          some: { id: filter.participantId },
         },
       },
       orderBy: [{ lastMessageAt: "desc" }, { updatedAt: "desc" }],
       include: {
-        participants: {
-          select: {
-            id: true,
-          },
-        },
+        participants: { select: { id: true } },
       },
     });
 
     return conversations.map(toConversation);
   },
 
-  async touchConversation(
-    conversationId: string,
-    preview: string
-  ): Promise<void> {
+  async touchConversation(conversationId: string, preview: string): Promise<void> {
     await prisma.conversation.update({
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
         lastMessagePreview: preview,
-        updatedAt: new Date(),
       },
     });
-  },
-
-  async removeAll(): Promise<void> {
-    await prisma.message.deleteMany({});
-    await prisma.conversation.deleteMany({});
   },
 };
