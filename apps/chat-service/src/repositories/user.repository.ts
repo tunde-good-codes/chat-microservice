@@ -4,7 +4,7 @@ import prisma from "../database";
 export const userRepository = {
   async upsertUser(payload: any) {
 
-    await prisma.users.upsert({
+    await prisma.user.upsert({
       where: { id: payload.id },
       update: {
         email: payload.email,
@@ -22,7 +22,6 @@ export const userRepository = {
   },
 
   async findUserById(id: string) {
-    const prisma = getPrismaClient();
     return prisma.user.findUnique({ where: { id } });
   },
 };

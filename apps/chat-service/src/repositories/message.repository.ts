@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { Message, MessageListOptions } from '@/types/message';
-import { getPrismaClient } from '@/clients/prisma.client';
-
+import {Message, MessageListOptions} from "../../types/message" 
+import prisma from "@/database";
 const toMessage = (msg: any): Message => ({
   id: msg.id,
   conversationId: msg.conversationId,
@@ -17,7 +16,6 @@ const toMessage = (msg: any): Message => ({
 
 export const messageRepository = {
   async create(conversationId: string, senderId: string, body: string): Promise<Message> {
-    const prisma = getPrismaClient();
 
     const message = await prisma.message.create({
       data: {
@@ -27,7 +25,7 @@ export const messageRepository = {
         body,
         createdAt: new Date(),
       },
-      include: { reactions: true },
+      // include: { reactions: true },
     });
 
     return toMessage(message);
@@ -37,7 +35,6 @@ export const messageRepository = {
     conversationId: string,
     options: MessageListOptions = {},
   ): Promise<Message[]> {
-    const prisma = getPrismaClient();
 
     const messages = await prisma.message.findMany({
       where: {
@@ -46,18 +43,17 @@ export const messageRepository = {
       },
       orderBy: { createdAt: 'desc' },
       take: options.limit ?? 50,
-      include: { reactions: true },
+      // include: { reactions: true },
     });
 
     return messages.map(toMessage);
   },
 
   async findById(messageId: string): Promise<Message | null> {
-    const prisma = getPrismaClient();
 
     const message = await prisma.message.findUnique({
       where: { id: messageId },
-      include: { reactions: true },
+      // include: { reactions: true },
     });
 
     return message ? toMessage(message) : null;
